@@ -8,6 +8,8 @@ const inquirer = require("inquirer");
 const shell = require("shelljs");
 const chalk = require("chalk");
 
+const render = require("./utils/template").render;
+
 // Obtener las opciones de los templates
 
 const TEMPLATE_OPTIONS = fs.readdirSync(path.join(__dirname, "templates"));
@@ -39,6 +41,8 @@ inquirer.prompt(QUESTIONS).then((respuestas) => {
 
   createProject(pathTarget);
   createDirectoriesFilesContent(templatePath, proyecto);
+
+  postProcess(templatePath, pathTarget);
 });
 
 function createProject(projectPath) {
@@ -52,7 +56,7 @@ function createProject(projectPath) {
   return true;
 }
 
-function createDirectoriesFilesContent(templatePath, proyecto) {
+function createDirectoriesFilesContent(templatePath, projectName) {
   const listFileDirectories = fs.readdirSync(templatePath);
 
   listFileDirectories.forEach((item) => {
@@ -60,17 +64,38 @@ function createDirectoriesFilesContent(templatePath, proyecto) {
 
     const stats = fs.statSync(originalPath);
 
-    const writePath = path.join(DIR_ACTUAL, proyecto, item);
+    const writePath = path.join(DIR_ACTUAL, projectName, item);
 
     if (stats.isFile()) {
       let content = fs.readFileSync(originalPath, "utf-8");
+
+      contents = render(contents, { projectName });
       fs.writeFileSync(writePath, content, "utf-8");
+      //información adicional
+      const CREATE = chalk.green("CREATE");
+      const size = stats["sz"];
+      console.log(`${CREATE} ${originalPath} (${size}) bytes`);
     } else if (stats.isDirectory()) {
       fs.mkdirSync(writePath);
       createDirectoriesFilesContent(
         path.join(templatePath, item),
-        path.join(proyecto, item)
+        path.join(projectName, item)
       );
     }
   });
+}
+
+function postProcess(templatePath, targetPath) {
+  const isNode = fs.existsSync(path.join(templatePath, "package.json"));
+
+  if (isNode) {
+    shell.cd(targetPath);
+    console.log(chalk.green(`Instalando las dependencias en ${targetPath}`));
+
+    const result = shell.exec("npm install");
+
+    if (result.code != 0) {
+      return false;
+    }
+  }
 }
