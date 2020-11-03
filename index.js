@@ -28,4 +28,25 @@ const QUESTIONS = [
   },
 ];
 //console.log(QUESTIONS);
-inquirer.prompt(QUESTIONS).then((respuestas) => console.log(respuestas));
+const DIR_ACTUAL = process.cwd();
+inquirer.prompt(QUESTIONS).then((respuestas) => {
+  const template = respuestas["template"];
+  const proyecto = respuestas["proyecto"];
+
+  const templatePath = path.join(__dirname, "templates", template);
+
+  const pathTarget = path.join(DIR_ACTUAL, proyecto);
+
+  createProject(pathTarget);
+});
+
+function createProject(projectPath) {
+  //comprobar que no existe el directorio
+
+  if (fs.existsSync(projectPath)) {
+    console.log(chalk.red("No puedes crear el proyecto, porque ya existe"));
+    return false;
+  }
+  fs.mkdirSync(projectPath);
+  return true;
+}
